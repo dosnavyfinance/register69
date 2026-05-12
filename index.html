@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบลงทะเบียนสอบ</title>
+    <!-- ใช้ Tailwind CSS เพื่อความสวยงามและรวดเร็ว -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- LINE LIFF SDK -->
+    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+</head>
+<body class="bg-slate-100 min-h-screen p-4">
+    <div class="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden p-6">
+        <h2 class="text-2xl font-bold text-center text-blue-800 mb-6">ลงทะเบียนรายงานตัว</h2>
+        
+        <!-- ส่วนที่ 1: กรอกข้อมูลเบื้องต้น -->
+        <div id="step1">
+            <div class="mb-4">
+                <label class="block text-gray-700">หมายเลขกลาโหม</label>
+                <input type="text" id="milId" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="ระบุหมายเลขกลาโหม">
+            </div>
+            <div class="mb-6">
+                <label class="block text-gray-700">เบอร์โทรศัพท์</label>
+                <input type="tel" id="phone" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="08XXXXXXXX">
+            </div>
+            <button onclick="checkInfo()" id="btnNext" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">ถัดไป</button>
+        </div>
+
+        <!-- ส่วนที่ 2: แสดงข้อมูลเพื่อยืนยัน -->
+        <div id="step2" class="hidden">
+            <div class="bg-blue-50 p-4 rounded-lg mb-6 text-sm">
+                <p><strong>ชื่อ-นามสกุล:</strong> <span id="dispName"></span></p>
+                <p><strong>สังกัด:</strong> <span id="dispUnit"></span></p>
+                <p><strong>เลขที่นั่งสอบ:</strong> <span id="dispSeat"></span></p>
+                <p><strong>ห้องสอบ:</strong> <span id="dispRoom"></span></p>
+                <p><strong>ตำแหน่งที่สอบ:</strong> <span id="dispPos"></span></p>
+            </div>
+            <button onclick="submitRegistry()" id="btnConfirm" class="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition">ยืนยันการลงทะเบียน</button>
+            <button onclick="location.reload()" class="w-full mt-2 text-gray-500 text-sm">ยกเลิก/แก้ไข</button>
+        </div>
+
+        <!-- Loading -->
+        <div id="loader" class="hidden text-center py-4">
+            <p class="text-blue-500 animate-pulse">กำลังประมวลผล...</p>
+        </div>
+    </div>
+
+    <script>
+        // --- การตั้งค่า ---
+        const LIFF_ID = 'YOUR_LIFF_ID'; // นำมาจาก LINE Developers Console
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzdkPrIiO-u73RCKi_-gaqp-yO-SppXwEdThuB91HeVB_pyiLpXA9N2Kd-KgEocIEleYw/exec'; // URL ที่ได้จากการ Deploy GAS
+
+        let userProfile = {};
+        let fetchedData = {};
+
+        // เริ่มการทำงาน LIFF
+        async function main() {
+            await liff.init({ liffId: LIFF_ID });
+            if (!liff.isLoggedIn()) {
+                liff.login();
+            } else {
+                userProfile = await liff.getProfile();
+            }
+        }
+        main();
+
+        // ฟังก์ชันตรวจสอบข้อมูล (Step 1 -> Step 2)
+        async function checkInfo() {
+            const milId = document.getElementById('milId').value;
+            const phone = document.getElementById('phone').value;
+
+            if (!milId || !phone) return alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+
+            toggleLoader(true);
+            
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        action: 'checkRegistration',
+                        milId: milId,
+                        userId: userProfile.userId
+                    })
+                });
+                const result = await response.json();
+
+                if (result.status === 'registered') {
+                    alert('ท่านเคยลงทะเบียนเรียบร้อยแล้ว');
+                    liff.closeWindow();
+                } else if (result.status === 'found') {
+                    fetchedData = result.data;
+                    // แสดงข้อมูลใน Step 2
+                    document.getElementById('dispName').innerText = fetchedData.name;
+                    document.getElementById('dispUnit').innerText = fetchedData.unit;
+                    document.getElementById('dispSeat').innerText = fetchedData.seat;
+                    document.getElementById('dispRoom').innerText = fetchedData.room;
+                    document.getElementById('dispPos').innerText = fetchedData.position;
+                    
+                    document.getElementById('step1').classList.add('hidden');
+                    document.getElementById('step2').classList.remove('hidden');
+                } else {
+                    alert('ไม่พบข้อมูลของท่านในระบบผู้มีสิทธิ์สอบ กรุณาตรวจสอบหมายเลขกลาโหมอีกครั้ง');
+                }
+            } catch (e) {
+                alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+            } finally {
+                toggleLoader(false);
+            }
+        }
+
+        // ฟังก์ชันบันทึกข้อมูล (Step 2 -> Finish)
+        async function submitRegistry() {
+            toggleLoader(true);
+            const payload = {
+                action: 'register',
+                milId: document.getElementById('milId').value,
+                phone: document.getElementById('phone').value,
+                position: fetchedData.position,
+                userId: userProfile.userId,
+                displayName: userProfile.displayName,
+                profileImage: userProfile.pictureUrl,
+                statusMessage: userProfile.statusMessage || '',
+                viewpic: userProfile.pictureUrl
+            };
+
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    alert('ลงทะเบียนสำเร็จ!');
+                    liff.closeWindow();
+                }
+            } catch (e) {
+                alert('บันทึกข้อมูลไม่สำเร็จ');
+            } finally {
+                toggleLoader(false);
+            }
+        }
+
+        function toggleLoader(show) {
+            document.getElementById('loader').classList.toggle('hidden', !show);
+            document.getElementById('btnNext').disabled = show;
+            document.getElementById('btnConfirm').disabled = show;
+        }
+    </script>
+</body>
+</html>
