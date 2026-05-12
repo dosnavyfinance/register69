@@ -4,70 +4,105 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ลงทะเบียนสอบเลื่อนฐานะ</title>
-    <!-- ใช้ Tailwind CSS เพื่อความสวยงามและรวดเร็ว -->
+    <!-- ใช้ Tailwind CSS เพื่อความสวยงาม -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- LINE LIFF SDK -->
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap');
+        body { font-family: 'Sarabun', sans-serif; }
+    </style>
 </head>
 <body class="bg-slate-100 min-h-screen p-4">
-    <div class="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden p-6">
-        <h2 class="text-2xl font-bold text-center text-blue-800 mb-6">ลงทะเบียนรายงานตัว</h2>
+    <div class="max-w-md mx-auto bg-white rounded-2xl shadow-xl overflow-hidden p-8 mt-4">
+        <h2 class="text-2xl font-bold text-center text-blue-800 mb-8">ลงทะเบียนรายงานตัว</h2>
         
         <!-- ส่วนที่ 1: กรอกข้อมูลเบื้องต้น -->
-        <div id="step1">
-            <div class="mb-4">
-                <label class="block text-gray-700">หมายเลขกลาโหม</label>
-                <input type="text" id="milId" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="ระบุหมายเลขกลาโหม">
+        <div id="step1" class="space-y-5">
+            <div>
+                <label class="block text-gray-700 font-semibold mb-2">หมายเลขกลาโหม</label>
+                <input type="text" id="milId" class="w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-lg" placeholder="ระบุหมายเลขกลาโหม">
             </div>
-            <div class="mb-6">
-                <label class="block text-gray-700">เบอร์โทรศัพท์</label>
-                <input type="tel" id="phone" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="08XXXXXXXX">
+            <div>
+                <label class="block text-gray-700 font-semibold mb-2">เบอร์โทรศัพท์</label>
+                <input type="tel" id="phone" class="w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-lg" placeholder="08XXXXXXXX">
             </div>
-            <button onclick="checkInfo()" id="btnNext" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">ถัดไป</button>
+            <button onclick="checkInfo()" id="btnNext" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-xl hover:bg-blue-700 transition shadow-lg active:scale-95 disabled:opacity-50">
+                ถัดไป
+            </button>
         </div>
 
-        <!-- ส่วนที่ 2: แสดงข้อมูลเพื่อยืนยัน -->
+        <!-- ส่วนที่ 2: แสดงข้อมูลเพื่อยืนยัน (ปรับขนาดตัวอักษรให้ใหญ่ขึ้น) -->
         <div id="step2" class="hidden">
-            <div class="bg-blue-50 p-4 rounded-lg mb-6 text-sm">
-                <p><strong>ชื่อ-นามสกุล:</strong> <span id="dispName"></span></p>
-                <p><strong>สังกัด:</strong> <span id="dispUnit"></span></p>
-                <p><strong>เลขที่นั่งสอบ:</strong> <span id="dispSeat"></span></p>
-                <p><strong>ห้องสอบ:</strong> <span id="dispRoom"></span></p>
-                <p><strong>ตำแหน่งที่สอบ:</strong> <span id="dispPos"></span></p>
+            <div class="bg-blue-50 p-6 rounded-2xl mb-8 border border-blue-100 shadow-inner">
+                <h3 class="text-blue-900 font-bold text-xl mb-5 border-b border-blue-200 pb-2">ข้อมูลผู้สอบ</h3>
+                <div class="space-y-4">
+                    <div>
+                        <p class="text-gray-500 text-sm">ชื่อ-นามสกุล</p>
+                        <p id="dispName" class="font-bold text-xl text-gray-800"></p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500 text-sm">สังกัด</p>
+                        <p id="dispUnit" class="font-semibold text-lg text-gray-800"></p>
+                    </div>
+                    <div class="flex justify-between items-end">
+                        <div>
+                            <p class="text-gray-500 text-sm">เลขที่นั่งสอบ</p>
+                            <p id="dispSeat" class="font-bold text-3xl text-red-600"></p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-gray-500 text-sm">ห้องสอบ</p>
+                            <p id="dispRoom" class="font-bold text-xl text-gray-800"></p>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-gray-500 text-sm">ตำแหน่งที่สอบ</p>
+                        <p id="dispPos" class="font-semibold text-lg text-green-700"></p>
+                    </div>
+                </div>
             </div>
-            <button onclick="submitRegistry()" id="btnConfirm" class="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition">ยืนยันการลงทะเบียน</button>
-            <button onclick="location.reload()" class="w-full mt-2 text-gray-500 text-sm">ยกเลิก/แก้ไข</button>
+            <button onclick="submitRegistry()" id="btnConfirm" class="w-full bg-green-600 text-white py-4 rounded-xl font-bold text-xl hover:bg-green-700 transition shadow-lg active:scale-95 disabled:opacity-50">
+                ยืนยันการลงทะเบียน
+            </button>
+            <button onclick="location.reload()" id="btnEdit" class="w-full mt-4 text-gray-500 font-medium hover:text-gray-700 underline transition">
+                แก้ไขข้อมูล
+            </button>
         </div>
 
-        <!-- Loading -->
-        <div id="loader" class="hidden text-center py-4">
-            <p class="text-blue-500 animate-pulse">กำลังประมวลผล...</p>
+        <!-- Loading Spinner -->
+        <div id="loader" class="hidden flex flex-col items-center justify-center py-10">
+            <svg class="animate-spin h-12 w-12 text-blue-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p class="text-blue-600 font-bold animate-pulse">กำลังประมวลผล...</p>
         </div>
     </div>
 
     <script>
-        // --- การตั้งค่า ---
-        const LIFF_ID = '2006679138-zia706Xy'; // นำมาจาก LINE Developers Console
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzdkPrIiO-u73RCKi_-gaqp-yO-SppXwEdThuB91HeVB_pyiLpXA9N2Kd-KgEocIEleYw/exec'; // URL ที่ได้จากการ Deploy GAS
+        const LIFF_ID = '2006679138-zia706Xy'; 
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzdkPrIiO-u73RCKi_-gaqp-yO-SppXwEdThuB91HeVB_pyiLpXA9N2Kd-KgEocIEleYw/exec'; 
 
         let userProfile = {};
         let fetchedData = {};
 
-        // เริ่มการทำงาน LIFF
         async function main() {
-            await liff.init({ liffId: LIFF_ID });
-            if (!liff.isLoggedIn()) {
-                liff.login();
-            } else {
-                userProfile = await liff.getProfile();
+            try {
+                await liff.init({ liffId: LIFF_ID });
+                if (!liff.isLoggedIn()) {
+                    liff.login();
+                } else {
+                    userProfile = await liff.getProfile();
+                }
+            } catch (err) {
+                console.error('LIFF Error:', err);
             }
         }
         main();
 
-        // ฟังก์ชันตรวจสอบข้อมูล (Step 1 -> Step 2)
         async function checkInfo() {
-            const milId = document.getElementById('milId').value;
-            const phone = document.getElementById('phone').value;
+            const milId = document.getElementById('milId').value.trim();
+            const phone = document.getElementById('phone').value.trim();
 
             if (!milId || !phone) return alert('กรุณากรอกข้อมูลให้ครบถ้วน');
 
@@ -89,7 +124,6 @@
                     liff.closeWindow();
                 } else if (result.status === 'found') {
                     fetchedData = result.data;
-                    // แสดงข้อมูลใน Step 2
                     document.getElementById('dispName').innerText = fetchedData.name;
                     document.getElementById('dispUnit').innerText = fetchedData.unit;
                     document.getElementById('dispSeat').innerText = fetchedData.seat;
@@ -99,16 +133,15 @@
                     document.getElementById('step1').classList.add('hidden');
                     document.getElementById('step2').classList.remove('hidden');
                 } else {
-                    alert('ไม่พบข้อมูลของท่านในระบบผู้มีสิทธิ์สอบ กรุณาตรวจสอบหมายเลขกลาโหมอีกครั้ง');
+                    alert('ไม่พบข้อมูลผู้มีสิทธิ์สอบ กรุณาตรวจสอบหมายเลขกลาโหมอีกครั้ง');
                 }
             } catch (e) {
-                alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+                alert('เกิดข้อผิดพลาดในการเชื่อมต่อระบบ');
             } finally {
                 toggleLoader(false);
             }
         }
 
-        // ฟังก์ชันบันทึกข้อมูล (Step 2 -> Finish)
         async function submitRegistry() {
             toggleLoader(true);
             const payload = {
@@ -133,18 +166,44 @@
                 if (result.status === 'success') {
                     alert('ลงทะเบียนสำเร็จ!');
                     liff.closeWindow();
+                } else {
+                    alert(result.message || 'ลงทะเบียนไม่สำเร็จ');
                 }
             } catch (e) {
-                alert('บันทึกข้อมูลไม่สำเร็จ');
+                alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
             } finally {
                 toggleLoader(false);
             }
         }
 
+        // ฟังก์ชันป้องกันการแก้ไขข้อมูลและแสดง Spinner
         function toggleLoader(show) {
-            document.getElementById('loader').classList.toggle('hidden', !show);
-            document.getElementById('btnNext').disabled = show;
-            document.getElementById('btnConfirm').disabled = show;
+            const loader = document.getElementById('loader');
+            const btnNext = document.getElementById('btnNext');
+            const btnConfirm = document.getElementById('btnConfirm');
+            const btnEdit = document.getElementById('btnEdit');
+            const milIdInput = document.getElementById('milId');
+            const phoneInput = document.getElementById('phone');
+
+            if (show) {
+                loader.classList.remove('hidden');
+                btnNext.disabled = true;
+                btnConfirm.disabled = true;
+                btnEdit.classList.add('hidden');
+                milIdInput.disabled = true;
+                phoneInput.disabled = true;
+                milIdInput.classList.add('bg-gray-100');
+                phoneInput.classList.add('bg-gray-100');
+            } else {
+                loader.classList.add('hidden');
+                btnNext.disabled = false;
+                btnConfirm.disabled = false;
+                btnEdit.classList.remove('hidden');
+                milIdInput.disabled = false;
+                phoneInput.disabled = false;
+                milIdInput.classList.remove('bg-gray-100');
+                phoneInput.classList.remove('bg-gray-100');
+            }
         }
     </script>
 </body>
