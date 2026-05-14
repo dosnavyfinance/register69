@@ -28,20 +28,24 @@
                 <input type="tel" id="phone" class="w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-lg" placeholder="08XXXXXXXX">
             </div>
             
+            <!-- ส่วนกรอกรหัสลับที่ปรับปรุงแล้ว -->
             <div class="mb-6">
-                <label class="block text-gray-700 font-semibold mb-2 text-blue-800">ยืนยันรหัสสถานที่สอบ</label>
+                <label class="block text-gray-700 font-semibold mb-2 text-blue-800">รหัสยืนยันสถานที่สอบ</label>
                 <div class="flex gap-2">
-                    <input type="text" id="checkInCode" readonly 
-                        class="flex-1 px-4 py-3 border-2 bg-gray-50 rounded-xl font-bold text-blue-600 focus:outline-none" 
-                        placeholder="โปรดสแกน QR Code">
+                    <!-- เปลี่ยนเป็น type="password" เพื่อซ่อนรหัส และเอา readonly ออก -->
+                    <input type="password" id="checkInCode" 
+                        class="flex-1 px-4 py-3 border-2 bg-white rounded-xl font-bold text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-center tracking-widest" 
+                        placeholder="สแกนหรือพิมพ์รหัส">
+                    
+                    <!-- ปุ่มสแกนยังคงไว้สำหรับคนที่กล้องใช้งานได้ -->
                     <button onclick="handleScanQR()" type="button" 
-                        class="bg-blue-100 text-blue-600 px-4 py-3 rounded-xl hover:bg-blue-200 transition active:scale-95">
+                        class="bg-blue-600 text-white px-4 py-3 rounded-xl hover:bg-blue-700 transition active:scale-95 shadow-md">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
                     </button>
                 </div>
-                <p class="text-xs text-gray-500 mt-1">* สแกน QR Code ที่ติดอยู่ ณ จุดรายงานตัว</p>
+                <p class="text-xs text-red-500 mt-2">* หากสแกนไม่ได้ สามารถพิมพ์รหัสตามที่ปรากฏหน้าห้องสอบ</p>
             </div>
             
             <button onclick="checkInfo()" id="btnNext" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-xl hover:bg-blue-700 transition shadow-lg active:scale-95 disabled:opacity-50">
@@ -118,32 +122,43 @@
         main();
 
             // กำหนดรหัสที่ถูกต้อง (ควรตรงกับที่คุณพิมพ์แปะไว้หน้าห้อง)
-            const SECRET_EXAM_CODE = "RTN-FIN-2026"; 
+            const SECRET_EXAM_CODE = "RTN2026"; 
             
             // ฟังก์ชันเปิดกล้องสแกน QR Code
             async function handleScanQR() {
                 try {
-                    // ตรวจสอบว่า LIFF รองรับการสแกนไหม
+                    // 1. เช็คว่าเปิดใน LINE หรือไม่
                     if (!liff.isInClient()) {
-                        alert("กรุณาเปิดผ่านแอป LINE เพื่อใช้งานการสแกน QR Code");
+                        alert("กรุณาใช้งานผ่านแอป LINE เท่านั้น");
                         return;
                     }
             
+                    // 2. เช็คว่า LIFF รองรับคำสั่งสแกนไหม
+                    if (!liff.scanCodeV2) {
+                        alert("LINE เวอร์ชันนี้ไม่รองรับการสแกน หรือยังไม่ได้เปิดสิทธิ์ Scan Code ใน Console");
+                        return;
+                    }
+            
+                    // 3. เรียกเปิดกล้อง
                     const result = await liff.scanCodeV2();
-                    if (result.value) {
+                    
+                    // ถ้าสแกนสำเร็จ
+                    if (result && result.value) {
                         document.getElementById('checkInCode').value = result.value;
                         
-                        // ตรวจสอบทันทีว่ารหัสตรงไหม
                         if (result.value === SECRET_EXAM_CODE) {
                             alert("ยืนยันรหัสสถานที่ถูกต้อง ✅");
                         } else {
-                            alert("รหัสไม่ถูกต้อง ❌ กรุณาสแกน QR Code ที่ทางเจ้าหน้าที่เตรียมไว้ให้");
+                            alert("รหัสไม่ถูกต้อง ❌");
                             document.getElementById('checkInCode').value = "";
                         }
                     }
                 } catch (err) {
+                    // หากผู้ใช้กด "ยกเลิก" หรือปิดกล้อง จะตกลงมาที่นี่
                     console.error(err);
-                    alert("ไม่สามารถเปิดกล้องได้ หรือการสแกนถูกยกเลิก");
+                    if (err.message !== "The user cancelled the scan.") {
+                        alert("เกิดข้อผิดพลาด: " + err.message);
+                    }
                 }
             }
         
