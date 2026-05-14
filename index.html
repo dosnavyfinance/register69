@@ -27,6 +27,23 @@
                 <label class="block text-gray-700 font-semibold mb-2">เบอร์โทรศัพท์</label>
                 <input type="tel" id="phone" class="w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-lg" placeholder="08XXXXXXXX">
             </div>
+            
+            <div class="mb-6">
+                <label class="block text-gray-700 font-semibold mb-2 text-blue-800">ยืนยันรหัสสถานที่สอบ</label>
+                <div class="flex gap-2">
+                    <input type="text" id="checkInCode" readonly 
+                        class="flex-1 px-4 py-3 border-2 bg-gray-50 rounded-xl font-bold text-blue-600 focus:outline-none" 
+                        placeholder="โปรดสแกน QR Code">
+                    <button onclick="handleScanQR()" type="button" 
+                        class="bg-blue-100 text-blue-600 px-4 py-3 rounded-xl hover:bg-blue-200 transition active:scale-95">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                    </button>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">* สแกน QR Code ที่ติดอยู่ ณ จุดรายงานตัว</p>
+            </div>
+            
             <button onclick="checkInfo()" id="btnNext" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-xl hover:bg-blue-700 transition shadow-lg active:scale-95 disabled:opacity-50">
                 ถัดไป
             </button>
@@ -100,12 +117,48 @@
         }
         main();
 
+            // กำหนดรหัสที่ถูกต้อง (ควรตรงกับที่คุณพิมพ์แปะไว้หน้าห้อง)
+            const SECRET_EXAM_CODE = "RTN-FIN-2026"; 
+            
+            // ฟังก์ชันเปิดกล้องสแกน QR Code
+            async function handleScanQR() {
+                try {
+                    // ตรวจสอบว่า LIFF รองรับการสแกนไหม
+                    if (!liff.isInClient()) {
+                        alert("กรุณาเปิดผ่านแอป LINE เพื่อใช้งานการสแกน QR Code");
+                        return;
+                    }
+            
+                    const result = await liff.scanCodeV2();
+                    if (result.value) {
+                        document.getElementById('checkInCode').value = result.value;
+                        
+                        // ตรวจสอบทันทีว่ารหัสตรงไหม
+                        if (result.value === SECRET_EXAM_CODE) {
+                            alert("ยืนยันรหัสสถานที่ถูกต้อง ✅");
+                        } else {
+                            alert("รหัสไม่ถูกต้อง ❌ กรุณาสแกน QR Code ที่ทางเจ้าหน้าที่เตรียมไว้ให้");
+                            document.getElementById('checkInCode').value = "";
+                        }
+                    }
+                } catch (err) {
+                    console.error(err);
+                    alert("ไม่สามารถเปิดกล้องได้ หรือการสแกนถูกยกเลิก");
+                }
+            }
+        
         async function checkInfo() {
             const milId = document.getElementById('milId').value.trim();
             const phone = document.getElementById('phone').value.trim();
+            const inputCode = document.getElementById('checkInCode').value.trim();
 
             if (!milId || !phone) return alert('กรุณากรอกข้อมูลให้ครบถ้วน');
 
+            // ตรวจสอบรหัสลับ
+            if (inputCode !== SECRET_EXAM_CODE) {
+                return alert('กรุณาสแกน QR Code ประจำจุดรายงานตัวก่อนดำเนินการต่อ');
+            }
+            
             toggleLoader(true);
             
             try {
