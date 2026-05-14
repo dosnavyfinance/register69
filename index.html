@@ -45,7 +45,7 @@
                         </svg>
                     </button>
                 </div>
-                <p class="text-xs text-red-500 mt-2">* หากสแกนไม่ได้ สามารถพิมพ์รหัสตามที่ปรากฏหน้าห้องสอบ</p>
+                <p class="text-xs text-red-500 mt-2">* หากสแกนไม่ได้ สามารถแจ้งเจ้าหน้าที่ ณ จุดลงทะเบียน</p>
             </div>
             
             <button onclick="checkInfo()" id="btnNext" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-xl hover:bg-blue-700 transition shadow-lg active:scale-95 disabled:opacity-50">
@@ -160,7 +160,7 @@
 
         if (!milId || !phone) return alert('กรุณากรอกข้อมูลให้ครบถ้วน');
         if (inputCode !== SECRET_EXAM_CODE) {
-            return alert('กรุณาสแกน QR Code ประจำจุดรายงานตัวก่อนดำเนินการต่อ');
+            return alert('กรุณาสแกน QR Code ประจำจุดรายงานตัวก่อนดำเนินการต่อ หรือ ติดต่อเจ้าหน้าที่ ณ จุดลงทะเบียน');
         }
         
         toggleLoader(true);
