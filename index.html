@@ -101,117 +101,119 @@
     </div>
 
     <script>
-        const LIFF_ID = '2006679138-zia706Xy'; 
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzdkPrIiO-u73RCKi_-gaqp-yO-SppXwEdThuB91HeVB_pyiLpXA9N2Kd-KgEocIEleYw/exec'; 
+    const LIFF_ID = '2006679138-zia706Xy'; 
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbzdkPrIiO-u73RCKi_-gaqp-yO-SppXwEdThuB91HeVB_pyiLpXA9N2Kd-KgEocIEleYw/exec'; 
 
-        let userProfile = {};
-        let fetchedData = {};
+    let userProfile = {};
+    let fetchedData = {};
 
-        async function main() {
-            try {
-                await liff.init({ liffId: LIFF_ID });
-                if (!liff.isLoggedIn()) {
-                    liff.login();
+    // 1. ปรับปรุงการโหลด Profile ให้ชัวร์ขึ้น
+    async function main() {
+        try {
+            await liff.init({ liffId: LIFF_ID });
+            if (!liff.isLoggedIn()) {
+                liff.login();
+            } else {
+                userProfile = await liff.getProfile();
+                console.log("LIFF Profile Loaded:", userProfile.displayName);
+            }
+        } catch (err) {
+            console.error('LIFF Error:', err);
+        }
+    }
+    main();
+
+    const SECRET_EXAM_CODE = "RTN2026"; 
+    
+    async function handleScanQR() {
+        try {
+            if (!liff.isInClient()) {
+                alert("กรุณาใช้งานผ่านแอป LINE เท่านั้น");
+                return;
+            }
+            if (!liff.scanCodeV2) {
+                alert("LINE เวอร์ชันนี้ไม่รองรับการสแกน หรือยังไม่ได้เปิดสิทธิ์ Scan Code");
+                return;
+            }
+            const result = await liff.scanCodeV2();
+            if (result && result.value) {
+                document.getElementById('checkInCode').value = result.value;
+                if (result.value === SECRET_EXAM_CODE) {
+                    alert("ยืนยันรหัสสถานที่ถูกต้อง ✅");
                 } else {
-                    userProfile = await liff.getProfile();
+                    alert("รหัสไม่ถูกต้อง ❌");
+                    document.getElementById('checkInCode').value = "";
                 }
-            } catch (err) {
-                console.error('LIFF Error:', err);
+            }
+        } catch (err) {
+            console.error(err);
+            if (err.message !== "The user cancelled the scan.") {
+                alert("เกิดข้อผิดพลาด: " + err.message);
             }
         }
-        main();
+    }
+    
+    async function checkInfo() {
+        const milId = document.getElementById('milId').value.trim();
+        const phone = document.getElementById('phone').value.trim();
+        const inputCode = document.getElementById('checkInCode').value.trim();
 
-            // กำหนดรหัสที่ถูกต้อง (ควรตรงกับที่คุณพิมพ์แปะไว้หน้าห้อง)
-            const SECRET_EXAM_CODE = "RTN2026"; 
-            
-            // ฟังก์ชันเปิดกล้องสแกน QR Code
-            async function handleScanQR() {
-                try {
-                    // 1. เช็คว่าเปิดใน LINE หรือไม่
-                    if (!liff.isInClient()) {
-                        alert("กรุณาใช้งานผ่านแอป LINE เท่านั้น");
-                        return;
-                    }
-            
-                    // 2. เช็คว่า LIFF รองรับคำสั่งสแกนไหม
-                    if (!liff.scanCodeV2) {
-                        alert("LINE เวอร์ชันนี้ไม่รองรับการสแกน หรือยังไม่ได้เปิดสิทธิ์ Scan Code ใน Console");
-                        return;
-                    }
-            
-                    // 3. เรียกเปิดกล้อง
-                    const result = await liff.scanCodeV2();
-                    
-                    // ถ้าสแกนสำเร็จ
-                    if (result && result.value) {
-                        document.getElementById('checkInCode').value = result.value;
-                        
-                        if (result.value === SECRET_EXAM_CODE) {
-                            alert("ยืนยันรหัสสถานที่ถูกต้อง ✅");
-                        } else {
-                            alert("รหัสไม่ถูกต้อง ❌");
-                            document.getElementById('checkInCode').value = "";
-                        }
-                    }
-                } catch (err) {
-                    // หากผู้ใช้กด "ยกเลิก" หรือปิดกล้อง จะตกลงมาที่นี่
-                    console.error(err);
-                    if (err.message !== "The user cancelled the scan.") {
-                        alert("เกิดข้อผิดพลาด: " + err.message);
-                    }
-                }
-            }
+        if (!milId || !phone) return alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+        if (inputCode !== SECRET_EXAM_CODE) {
+            return alert('กรุณาสแกน QR Code ประจำจุดรายงานตัวก่อนดำเนินการต่อ');
+        }
         
-        async function checkInfo() {
-            const milId = document.getElementById('milId').value.trim();
-            const phone = document.getElementById('phone').value.trim();
-            const inputCode = document.getElementById('checkInCode').value.trim();
+        toggleLoader(true);
+        
+        try {
+            // ดึง Profile อีกครั้งเพื่อความชัวร์ก่อนคุยกับ GAS
+            if (liff.isLoggedIn()) userProfile = await liff.getProfile();
 
-            if (!milId || !phone) return alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+            const response = await fetch(GAS_URL, {
+                method: 'POST',
+                body: JSON.stringify({
+                    action: 'checkRegistration',
+                    milId: milId,
+                    userId: userProfile.userId
+                })
+            });
+            const result = await response.json();
 
-            // ตรวจสอบรหัสลับ
-            if (inputCode !== SECRET_EXAM_CODE) {
-                return alert('กรุณาสแกน QR Code ประจำจุดรายงานตัวก่อนดำเนินการต่อ');
+            if (result.status === 'registered') {
+                alert('ท่านเคยลงทะเบียนเรียบร้อยแล้ว');
+                liff.closeWindow();
+            } else if (result.status === 'found') {
+                fetchedData = result.data;
+                document.getElementById('dispName').innerText = fetchedData.name;
+                document.getElementById('dispUnit').innerText = fetchedData.unit;
+                document.getElementById('dispSeat').innerText = fetchedData.seat;
+                document.getElementById('dispRoom').innerText = fetchedData.room;
+                document.getElementById('dispPos').innerText = fetchedData.position;
+                
+                document.getElementById('step1').classList.add('hidden');
+                document.getElementById('step2').classList.remove('hidden');
+            } else {
+                alert('ไม่พบข้อมูลผู้มีสิทธิ์สอบ กรุณาตรวจสอบหมายเลขกลาโหมอีกครั้ง');
             }
-            
-            toggleLoader(true);
-            
-            try {
-                const response = await fetch(GAS_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        action: 'checkRegistration',
-                        milId: milId,
-                        userId: userProfile.userId
-                    })
-                });
-                const result = await response.json();
-
-                if (result.status === 'registered') {
-                    alert('ท่านเคยลงทะเบียนเรียบร้อยแล้ว');
-                    liff.closeWindow();
-                } else if (result.status === 'found') {
-                    fetchedData = result.data;
-                    document.getElementById('dispName').innerText = fetchedData.name;
-                    document.getElementById('dispUnit').innerText = fetchedData.unit;
-                    document.getElementById('dispSeat').innerText = fetchedData.seat;
-                    document.getElementById('dispRoom').innerText = fetchedData.room;
-                    document.getElementById('dispPos').innerText = fetchedData.position;
-                    
-                    document.getElementById('step1').classList.add('hidden');
-                    document.getElementById('step2').classList.remove('hidden');
-                } else {
-                    alert('ไม่พบข้อมูลผู้มีสิทธิ์สอบ กรุณาตรวจสอบหมายเลขกลาโหมอีกครั้ง');
-                }
-            } catch (e) {
-                alert('เกิดข้อผิดพลาดในการเชื่อมต่อระบบ');
-            } finally {
-                toggleLoader(false);
-            }
+        } catch (e) {
+            alert('เกิดข้อผิดพลาดในการเชื่อมต่อระบบ');
+        } finally {
+            toggleLoader(false);
         }
+    }
 
-        async function submitRegistry() {
-            toggleLoader(true);
+    async function submitRegistry() {
+        toggleLoader(true);
+        
+        try {
+            // --- จุดสำคัญ: Re-verify Profile ก่อนส่งบันทึก ---
+            if (liff.isLoggedIn()) {
+                userProfile = await liff.getProfile();
+            } else {
+                liff.login();
+                return;
+            }
+
             const payload = {
                 action: 'register',
                 milId: document.getElementById('milId').value,
@@ -219,60 +221,54 @@
                 position: fetchedData.position,
                 userId: userProfile.userId,
                 displayName: userProfile.displayName,
-                profileImage: userProfile.pictureUrl,
+                profileImage: userProfile.pictureUrl, // ใช้ pictureUrl ตามมาตรฐาน LINE
                 statusMessage: userProfile.statusMessage || '',
                 viewpic: userProfile.pictureUrl
             };
 
-            try {
-                const response = await fetch(GAS_URL, {
-                    method: 'POST',
-                    body: JSON.stringify(payload)
-                });
-                const result = await response.json();
+            const response = await fetch(GAS_URL, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
 
-                if (result.status === 'success') {
-                    alert('ลงทะเบียนสำเร็จ!');
-                    liff.closeWindow();
-                } else {
-                    alert(result.message || 'ลงทะเบียนไม่สำเร็จ');
-                }
-            } catch (e) {
-                alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
-            } finally {
-                toggleLoader(false);
-            }
-        }
-
-        // ฟังก์ชันป้องกันการแก้ไขข้อมูลและแสดง Spinner
-        function toggleLoader(show) {
-            const loader = document.getElementById('loader');
-            const btnNext = document.getElementById('btnNext');
-            const btnConfirm = document.getElementById('btnConfirm');
-            const btnEdit = document.getElementById('btnEdit');
-            const milIdInput = document.getElementById('milId');
-            const phoneInput = document.getElementById('phone');
-
-            if (show) {
-                loader.classList.remove('hidden');
-                btnNext.disabled = true;
-                btnConfirm.disabled = true;
-                btnEdit.classList.add('hidden');
-                milIdInput.disabled = true;
-                phoneInput.disabled = true;
-                milIdInput.classList.add('bg-gray-100');
-                phoneInput.classList.add('bg-gray-100');
+            if (result.status === 'success') {
+                alert('ลงทะเบียนสำเร็จ!');
+                liff.closeWindow();
             } else {
-                loader.classList.add('hidden');
-                btnNext.disabled = false;
-                btnConfirm.disabled = false;
-                btnEdit.classList.remove('hidden');
-                milIdInput.disabled = false;
-                phoneInput.disabled = false;
-                milIdInput.classList.remove('bg-gray-100');
-                phoneInput.classList.remove('bg-gray-100');
+                alert(result.message || 'ลงทะเบียนไม่สำเร็จ');
             }
+        } catch (e) {
+            alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+        } finally {
+            toggleLoader(false);
         }
-    </script>
+    }
+
+    function toggleLoader(show) {
+        const loader = document.getElementById('loader');
+        const btnNext = document.getElementById('btnNext');
+        const btnConfirm = document.getElementById('btnConfirm');
+        const btnEdit = document.getElementById('btnEdit');
+        const milIdInput = document.getElementById('milId');
+        const phoneInput = document.getElementById('phone');
+
+        if (show) {
+            loader.classList.remove('hidden');
+            if(btnNext) btnNext.disabled = true;
+            if(btnConfirm) btnConfirm.disabled = true;
+            if(btnEdit) btnEdit.classList.add('hidden');
+            milIdInput.disabled = true;
+            phoneInput.disabled = true;
+        } else {
+            loader.classList.add('hidden');
+            if(btnNext) btnNext.disabled = false;
+            if(btnConfirm) btnConfirm.disabled = false;
+            if(btnEdit) btnEdit.classList.remove('hidden');
+            milIdInput.disabled = false;
+            phoneInput.disabled = false;
+        }
+    }
+</script>
 </body>
 </html>
